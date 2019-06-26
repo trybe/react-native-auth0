@@ -37,7 +37,7 @@ repositories {
 def supportVersion = rootProject.hasProperty('supportLibVersion') ? rootProject.supportLibVersion : DEFAULT_SUPPORT_LIB_VERSION
 
 dependencies {
-    compile 'com.facebook.react:react-native:+'
-    compile "com.android.support:customtabs:${supportVersion}"
+    implementation 'com.facebook.react:react-native:+'
+    implementation "com.android.support:customtabs:${supportVersion}"
 }
 
