@@ -1,4 +1,3 @@
-
 #import "A0Auth0.h"
 
 #import <SafariServices/SafariServices.h>
@@ -15,6 +14,14 @@
 
 #define ERROR_CANCELLED @{@"error": @"a0.session.user_cancelled",@"error_description": @"User cancelled the Auth"}
 #define ERROR_FAILED_TO_LOAD @{@"error": @"a0.session.failed_load",@"error_description": @"Failed to load url"}
+
+#if __IPHONE_OS_VERSION_MAX_ALLOWED >= 130000 //manually adding support for iOS 13 Web Authentication changes
+@interface A0Auth0 () <SFSafariViewControllerDelegate, ASWebAuthenticationPresentationContextProviding>
+@end
+#else
+@interface A0Auth0 () <SFSafariViewControllerDelegate>
+@end
+#endif
 
 @interface A0Auth0 () <SFSafariViewControllerDelegate>
 @property (weak, nonatomic) SFSafariViewController *last;
@@ -72,7 +79,7 @@ RCT_EXPORT_METHOD(oauthParameters:(RCTResponseSenderBlock)callback) {
 }
 
 - (void)presentAuthenticationSession:(NSURL *)url {
-    
+
     NSURLComponents *urlComponents = [NSURLComponents componentsWithURL:url
                                                 resolvingAgainstBaseURL:NO];
     NSArray *queryItems = urlComponents.queryItems;
@@ -84,7 +91,7 @@ RCT_EXPORT_METHOD(oauthParameters:(RCTResponseSenderBlock)callback) {
     RCTResponseSenderBlock callback = self.sessionCallback ? self.sessionCallback : ^void(NSArray *_unused) {};
 
     if (@available(iOS 12.0, *)) {
-        self.authenticationSession = [[ASWebAuthenticationSession alloc]
+        ASWebAuthenticationSession*authenticationSession = [[ASWebAuthenticationSession alloc]
                                       initWithURL:url callbackURLScheme:callbackURLScheme
                                       completionHandler:^(NSURL * _Nullable callbackURL,
                                                           NSError * _Nullable error) {
@@ -98,6 +105,12 @@ RCT_EXPORT_METHOD(oauthParameters:(RCTResponseSenderBlock)callback) {
                                           }
                                           self.authenticationSession = nil;
                                       }];
+        #if __IPHONE_OS_VERSION_MAX_ALLOWED >= 130000
+        if (@available(iOS 13.0, *)) {
+            authenticationSession.presentationContextProvider = self;
+        }
+        #endif
+        self.authenticationSession = authenticationSession;
         [(ASWebAuthenticationSession*) self.authenticationSession start];
     } else if (@available(iOS 11.0, *)) {
         self.authenticationSession = [[SFAuthenticationSession alloc]
@@ -209,5 +222,13 @@ RCT_EXPORT_METHOD(oauthParameters:(RCTResponseSenderBlock)callback) {
         return rootViewController;
     }
 }
+
+#if __IPHONE_OS_VERSION_MAX_ALLOWED >= 130000
+#pragma mark - ASWebAuthenticationPresentationContextProviding
+
+- (ASPresentationAnchor)presentationAnchorForWebAuthenticationSession:(ASWebAuthenticationSession *)session API_AVAILABLE(ios(13.0)){
+    return [UIApplication sharedApplication].keyWindow;
+}
+#endif
 
 @end
